@@ -264,9 +264,10 @@ class EnsoProvider extends SwapProviderInterface {
 
   @override
   Future<Result<String>> getSpenderAddress(ChainId chainId) async {
-    // Enso router address usually returned in quote
-    // Common one: 0x2e84897Ef6017366B570a2AcE1D03C5331eF1735 (Example)
-    return Result.success('0x2e84897Ef6017366B570a2AcE1D03C5331eF1735');
+    // Enso spender should be extracted from the quote metadata 'spender' field
+    // or provided by the specific shortcut route.
+    return Result.failure(
+        'Enso requires fetching the spender from the route quote.');
   }
 
   SwapQuote _parseQuote(Map<String, dynamic> data, SwapParams params) {

@@ -76,6 +76,7 @@ class HashflowProvider extends SwapProviderInterface {
             'quoteToken': params.toTokenAddress,
             'baseTokenAmount': params.amountInSmallestUnit.toString(),
             'trader': params.userAddress,
+            'calldata': true,
           }
         ],
       };
@@ -115,14 +116,12 @@ class HashflowProvider extends SwapProviderInterface {
     required String userAddress,
     String? recipientAddress,
   }) async {
-    final rfq = quote.metadata['rfq'];
-    final signature = quote.metadata['signature'];
-
-    if (rfq == null || signature == null) {
-      return Result.failure('Missing RFQ data or signature in Hashflow quote');
-    }
-
     try {
+      final rfq = quote.metadata['rfq'] as Map<String, dynamic>?;
+      if (rfq == null) {
+        return Result.failure('Missing RFQ metadata for Hashflow swap');
+      }
+
       if (quote.params.fromChain == ChainId.solana) {
         return Result.success(SolanaTransaction(
           base64EncodedTransaction: rfq['transactionData'] ?? '',
@@ -144,37 +143,32 @@ class HashflowProvider extends SwapProviderInterface {
         ));
       }
 
-      final routerRes = await getSpenderAddress(quote.params.fromChain);
-      final routerAddress = routerRes.isSuccess
-          ? routerRes.valueOrNull!
-          : '0xHashflowRouterAddressPlaceholder';
+      final transactionData = quote.metadata['transactionData'] ??
+          quote.metadata['calldata'] as String?;
+
+      if (transactionData == null) {
+        return Result.failure('Missing calldata for Hashflow EVM transaction');
+      }
+
+      final isBridge = quote.params.fromChain != quote.params.toChain;
 
       return Result.success(
         EvmTransaction(
           from: userAddress,
-          to: routerAddress,
-          data:
-              '0xTradeRFQT_CallData_Placeholder', // Encode tradeRFQT(rfq, signature)
-          value: quote.params.fromTokenAddress.toLowerCase() == 'native' ||
-                  quote.params.fromTokenAddress ==
-                      '0x0000000000000000000000000000000000000000'
-              ? quote.params.amountInSmallestUnit
-              : BigInt.zero,
-          gasLimit: BigInt.from(300000),
+          to: rfq['address'] as String? ?? quote.params.fromTokenAddress,
+          data: transactionData,
+          value: BigInt.parse(rfq['value']?.toString() ?? '0'),
+          gasLimit: BigInt.parse(rfq['gasLimit']?.toString() ?? '300000'),
           gasPrice: BigInt.zero,
           chainId: quote.params.fromChain,
           summary: TransactionSummary(
-            action: quote.params.fromChain == quote.params.toChain
-                ? 'Swap'
-                : 'Bridge',
+            action: isBridge ? 'Bridge' : 'Swap',
             fromAsset: quote.params.fromToken,
             toAsset: quote.params.toToken,
             inputAmount: quote.inputAmount,
             expectedOutput: quote.outputAmount,
             protocol: name,
-            destinationChain: quote.params.fromChain == quote.params.toChain
-                ? null
-                : quote.params.toChain.name,
+            destinationChain: isBridge ? quote.params.toChain.name : null,
           ),
           metadata: quote.metadata,
         ),
@@ -325,22 +319,11 @@ class HashflowProvider extends SwapProviderInterface {
 
   @override
   Future<Result<String>> getSpenderAddress(ChainId chainId) async {
-    // Each chain has a specific Hashflow Router
-    switch (chainId) {
-      case ChainId.ethereum:
-      case ChainId.arbitrum:
-      case ChainId.optimism:
-      case ChainId.polygon:
-      case ChainId.bsc:
-      case ChainId.avalanche:
-      case ChainId.base:
-        // Hashflow Router (HashflowFactory/Pool) for EVM chains
-        return Result.success('0xdE828fdc3F497F16416D1bB645261C7C6a62DAb5');
-      // Add more as per Hashflow docs
-      default:
-        return Result.failure(
-            'Hashflow router address not configured for $chainId');
-    }
+    // For Hashflow, the spender is usually the 'address' field in the RFQ response
+    // or the 'to' field in the built transaction. Returning error here as it's
+    // dynamic per request.
+    return Result.failure(
+        'Hashflow requires fetching the spender from the quote/RFQ response.');
   }
 
   SwapQuote _parseQuote(Map<String, dynamic> rfqResult, SwapParams params,

@@ -333,19 +333,10 @@ class SocketProvider extends SwapProviderInterface {
 
   @override
   Future<Result<String>> getSpenderAddress(ChainId chainId) async {
-    // Socket usually returns 'approvalData' in the /build-tx response (allowanceTarget).
-    // But for a separate call, we might rely on a known Socket Vault address or fetch it.
-    // Endpoint: /approval/check-allowance (requires params)
-    // Or /approval/build-tx
-
-    // Best practice with Socket is often to rely on build-tx returning the approval tx if needed,
-    // or check 'allowanceTarget' in the quote response if available?
-    // Actually route object often has it.
-
-    // For now, return failure to enforce buildTransaction flow?
-    // Or hardcode Socket Gateway.
+    // Socket spender is the 'allowanceTarget' in the quote response.
+    // It varies by chain and bridge used.
     return Result.failure(
-        'Socket recommends checking allowance via build-tx response or quote data.');
+        'Socket requires fetching the "allowanceTarget" from the quote response.');
   }
 
   SwapQuote _parseQuote(Map<String, dynamic> route, SwapParams params) {

@@ -332,27 +332,44 @@ class AcrossProvider extends SwapProviderInterface {
     final totalRelayFee = BigInt.parse(data['totalRelayFee']?['total'] ?? '0');
     final outAmountSmallest = depositValue - totalRelayFee;
 
-    final divisor = Decimal.fromBigInt(BigInt.from(10).pow(18));
-    final outAmount =
-        (Decimal.parse(outAmountSmallest.toString()) / divisor).toDecimal();
+    final srcAmount = params.amountInSmallestUnit;
+    final destAmount = outAmountSmallest;
+    final minDestAmount =
+        outAmountSmallest; // Across has specific slippage in tx build
+
+    final srcDivisor = Decimal.fromBigInt(
+      BigInt.from(10).pow(params.fromTokenDecimals),
+    );
+    final destDivisor = Decimal.fromBigInt(
+      BigInt.from(10).pow(params.toTokenDecimals),
+    );
+
+    final inputAmount =
+        (Decimal.fromBigInt(srcAmount) / srcDivisor).toDecimal();
+    final outputAmount =
+        (Decimal.fromBigInt(destAmount) / destDivisor).toDecimal();
+    final minOutput =
+        (Decimal.fromBigInt(minDestAmount) / destDivisor).toDecimal();
+
+    final exchangeRate =
+        inputAmount > Decimal.zero ? outputAmount / inputAmount : Decimal.zero;
 
     return SwapQuote(
       provider: name,
       params: params,
-      inputAmount: params.amount,
-      outputAmount: outAmount,
-      minimumOutputAmount:
-          outAmount, // Across has specific slippage in tx build
-      exchangeRate: (outAmount / params.amount).toDecimal(),
+      inputAmount: inputAmount,
+      outputAmount: outputAmount,
+      minimumOutputAmount: minOutput,
+      exchangeRate: Decimal.parse(exchangeRate.toString()),
       routes: [],
       gasEstimate: GasEstimate.fromWei(
-        gasLimit: BigInt.parse('200000'), // Approx
+        gasLimit: BigInt.from(250000), // Slightly more conservative default
         gasPrice: BigInt.zero,
         nativeSymbol: params.fromChain.nativeSymbol,
       ),
       priceImpact: 0.0,
-      protocols: ['Across Relay'],
-      validUntil: (DateTime.now().millisecondsSinceEpoch ~/ 1000) + 120,
+      protocols: ['Across'],
+      validUntil: (DateTime.now().millisecondsSinceEpoch ~/ 1000) + 300,
       timestamp: DateTime.now(),
       metadata: data,
     );
