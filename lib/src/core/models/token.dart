@@ -49,7 +49,7 @@ class Token extends Equatable {
       symbol: chainId.nativeSymbol,
       name: chainId.name,
       address: chainId.nativeTokenAddress,
-      decimals: 18,
+      decimals: chainId.nativeDecimals,
       chainId: chainId,
       isNative: true,
     );

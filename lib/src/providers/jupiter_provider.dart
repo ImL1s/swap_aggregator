@@ -11,6 +11,7 @@ import '../core/models/swap_transaction.dart';
 import '../core/models/token.dart';
 import '../core/swap_provider_interface.dart';
 import '../utils/result.dart';
+import '../utils/unit_utils.dart';
 
 /// Jupiter Aggregator Provider (Solana)
 ///
@@ -249,13 +250,10 @@ class JupiterProvider extends SwapProviderInterface {
     final outAmount = BigInt.parse(data['outAmount']?.toString() ?? '0');
     final inAmount = BigInt.parse(data['inAmount']?.toString() ?? '0');
 
-    final decimalIn = (Decimal.fromBigInt(inAmount) /
-            Decimal.fromBigInt(BigInt.from(10).pow(params.fromTokenDecimals)))
-        .toDecimal();
-
-    final decimalOut = (Decimal.fromBigInt(outAmount) /
-            Decimal.fromBigInt(BigInt.from(10).pow(params.toTokenDecimals)))
-        .toDecimal();
+    final decimalIn =
+        UnitUtils.fromTokenUnit(inAmount, params.fromTokenDecimals);
+    final decimalOut =
+        UnitUtils.fromTokenUnit(outAmount, params.toTokenDecimals);
 
     // Calculate exchange rate
     final exchangeRate = decimalIn > Decimal.zero

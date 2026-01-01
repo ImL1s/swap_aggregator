@@ -12,6 +12,7 @@ import '../core/models/swap_transaction.dart';
 import '../core/models/token.dart';
 import '../core/swap_provider_interface.dart';
 import '../utils/result.dart';
+import '../utils/unit_utils.dart';
 
 /// Hashflow Provider
 ///
@@ -333,13 +334,10 @@ class HashflowProvider extends SwapProviderInterface {
     final amountOut =
         BigInt.parse(rfqResult['quoteTokenAmount']?.toString() ?? '0');
 
-    final decimalIn = (Decimal.fromBigInt(amountIn) /
-            Decimal.fromBigInt(BigInt.from(10).pow(params.fromTokenDecimals)))
-        .toDecimal();
-
-    final decimalOut = (Decimal.fromBigInt(amountOut) /
-            Decimal.fromBigInt(BigInt.from(10).pow(params.toTokenDecimals)))
-        .toDecimal();
+    final decimalIn =
+        UnitUtils.fromTokenUnit(amountIn, params.fromTokenDecimals);
+    final decimalOut =
+        UnitUtils.fromTokenUnit(amountOut, params.toTokenDecimals);
 
     return SwapQuote(
       provider: name,

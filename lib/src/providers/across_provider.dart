@@ -12,6 +12,7 @@ import '../core/models/swap_transaction.dart';
 import '../core/models/token.dart';
 import '../core/swap_provider_interface.dart';
 import '../utils/result.dart';
+import '../utils/unit_utils.dart';
 
 /// Across Protocol Provider
 /// Cross-chain bridge and aggregator.
@@ -337,19 +338,12 @@ class AcrossProvider extends SwapProviderInterface {
     final minDestAmount =
         outAmountSmallest; // Across has specific slippage in tx build
 
-    final srcDivisor = Decimal.fromBigInt(
-      BigInt.from(10).pow(params.fromTokenDecimals),
-    );
-    final destDivisor = Decimal.fromBigInt(
-      BigInt.from(10).pow(params.toTokenDecimals),
-    );
-
     final inputAmount =
-        (Decimal.fromBigInt(srcAmount) / srcDivisor).toDecimal();
+        UnitUtils.fromTokenUnit(srcAmount, params.fromTokenDecimals);
     final outputAmount =
-        (Decimal.fromBigInt(destAmount) / destDivisor).toDecimal();
+        UnitUtils.fromTokenUnit(destAmount, params.toTokenDecimals);
     final minOutput =
-        (Decimal.fromBigInt(minDestAmount) / destDivisor).toDecimal();
+        UnitUtils.fromTokenUnit(minDestAmount, params.toTokenDecimals);
 
     final exchangeRate =
         inputAmount > Decimal.zero ? outputAmount / inputAmount : Decimal.zero;
