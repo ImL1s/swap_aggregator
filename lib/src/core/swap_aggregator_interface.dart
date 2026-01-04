@@ -1,5 +1,6 @@
 import '../utils/result.dart';
 import 'models/chain_id.dart';
+import 'models/chain_transaction.dart';
 import 'models/swap_params.dart';
 import 'models/swap_quote.dart';
 import 'models/swap_status.dart';
@@ -43,6 +44,13 @@ abstract class SwapAggregatorInterface {
 
   /// Build a transaction for a specific quote
   Future<Result<SwapTransaction>> buildTransaction({
+    required SwapQuote quote,
+    required String userAddress,
+    String? recipientAddress,
+  });
+
+  /// Build a transaction for a specific quote (V2 - Multi-chain)
+  Future<Result<ChainTransaction>> buildTransactionV2({
     required SwapQuote quote,
     required String userAddress,
     String? recipientAddress,

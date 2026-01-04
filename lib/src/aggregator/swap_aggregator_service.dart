@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:collection/collection.dart';
 
 import '../core/models/chain_id.dart';
+import '../core/models/chain_transaction.dart';
 import '../core/models/swap_params.dart';
 import '../core/models/swap_quote.dart';
 import '../core/models/swap_status.dart';
@@ -137,6 +138,56 @@ class SwapAggregatorService implements SwapAggregatorInterface {
       userAddress: userAddress,
       recipientAddress: recipientAddress,
     );
+  }
+
+  @override
+  Future<Result<ChainTransaction>> buildTransactionV2({
+    required SwapQuote quote,
+    required String userAddress,
+    String? recipientAddress,
+  }) async {
+    final provider = getProvider(quote.provider);
+    if (provider == null) {
+      return Result.failure(
+        'Provider ${quote.provider} not found',
+        code: 'PROVIDER_NOT_FOUND',
+      );
+    }
+
+    // For now, let's map the existing buildTransaction to ChainTransaction
+    final result = await provider.buildTransaction(
+      quote: quote,
+      userAddress: userAddress,
+      recipientAddress: recipientAddress,
+    );
+
+    if (result.isFailure) {
+      return Result.failure(result.errorOrNull!);
+    }
+
+    final tx = result.valueOrNull!;
+
+    // Map SwapTransaction to EvmTransaction (all current aggregators are EVM)
+    return Result.success(EvmTransaction(
+      from: tx.from,
+      to: tx.to,
+      data: tx.data,
+      value: tx.value,
+      gasLimit: tx.gasLimit,
+      gasPrice: tx.gasPrice,
+      maxFeePerGas: tx.maxFeePerGas,
+      maxPriorityFeePerGas: tx.maxPriorityFeePerGas,
+      nonce: tx.nonce,
+      chainId: tx.chainId,
+      summary: TransactionSummary(
+        action: 'Swap',
+        fromAsset: quote.params.fromToken,
+        toAsset: quote.params.toToken,
+        inputAmount: quote.inputAmount,
+        expectedOutput: quote.outputAmount,
+        protocol: quote.provider,
+      ),
+    ));
   }
 
   @override
